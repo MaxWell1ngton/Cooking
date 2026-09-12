@@ -169,6 +169,7 @@ export function RecipeForm({ initialRecipe, onSubmit, cancelHref }: RecipeFormPr
         multiline
         ordered
         addLabel="Add step"
+        groups={ingredientsValue.groups.map((group) => ({ id: group.id, name: group.name }))}
       />
 
       <EditableList

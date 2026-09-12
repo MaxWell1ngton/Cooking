@@ -11,6 +11,7 @@ import { ConfirmDialog, type ConfirmDialogHandle } from "@/components/ConfirmDia
 import { RecipeLoadStatus } from "@/components/RecipeLoadStatus";
 import { RecipeScaler } from "@/components/RecipeScaler";
 import { RecipeImage } from "@/components/RecipeImage";
+import { StepText } from "@/components/StepText";
 
 function RecipeDetail() {
   const router = useRouter();
@@ -126,7 +127,9 @@ function RecipeDetail() {
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm font-semibold text-amber-800 dark:bg-amber-900 dark:text-amber-200">
                   {index + 1}
                 </span>
-                <p className="pt-0.5">{step}</p>
+                <div className="pt-0.5">
+                  <StepText step={step} recipe={recipe} scale={scale} />
+                </div>
               </li>
             ))}
           </ol>
