@@ -24,7 +24,16 @@ export async function uploadRecipeImage(blob: Blob): Promise<string> {
   const userId = await requireUserId();
   const path = `${userId}/${createId()}.jpg`;
 
-  const { error } = await supabase.storage.from(BUCKET).upload(path, blob, {
+  // supabase-js's upload() silently ignores the `contentType` option whenever
+  // the body is a Blob — it hands the Blob straight to FormData, so the
+  // request's actual Content-Type comes only from the Blob's own `.type`.
+  // A blob read back out of a zip archive (see backup/import.ts) has no
+  // stored MIME type at all and defaults to application/octet-stream, which
+  // the bucket's MIME allowlist then rejects — so force the type here rather
+  // than trust the option below to do anything for a Blob body.
+  const typedBlob = blob.type === "image/jpeg" ? blob : new Blob([blob], { type: "image/jpeg" });
+
+  const { error } = await supabase.storage.from(BUCKET).upload(path, typedBlob, {
     contentType: "image/jpeg",
     upsert: false,
   });
