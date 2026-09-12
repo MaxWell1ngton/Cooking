@@ -256,7 +256,7 @@ function IngredientRowList({
               onChange={(patch) => update(ingredient.id, patch)}
               onRemove={() => remove(ingredient.id)}
               onKeyDown={(event) => handleKeyDown(event, index)}
-              registerNameRef={(el) => registerRef(ingredient.id, el)}
+              registerQtyRef={(el) => registerRef(ingredient.id, el)}
             />
           ))}
         </div>
@@ -278,14 +278,14 @@ function SortableIngredientRow({
   onChange,
   onRemove,
   onKeyDown,
-  registerNameRef,
+  registerQtyRef,
 }: {
   containerId: string;
   ingredient: Ingredient;
   onChange: (patch: Partial<Ingredient>) => void;
   onRemove: () => void;
   onKeyDown: (event: KeyboardEvent) => void;
-  registerNameRef: (el: HTMLElement | null) => void;
+  registerQtyRef: (el: HTMLElement | null) => void;
 }) {
   const data: DragTargetData = { type: "ingredient", containerId };
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -298,6 +298,7 @@ function SortableIngredientRow({
     <div ref={setNodeRef} style={style} className="flex items-center gap-2 rounded-lg bg-stone-50 dark:bg-stone-950">
       <DragHandle {...attributes} {...listeners} />
       <input
+        ref={(el) => registerQtyRef(el)}
         aria-label="Quantity"
         placeholder="Qty"
         value={ingredient.quantity ?? ""}
@@ -314,7 +315,6 @@ function SortableIngredientRow({
         className={`${fieldClass} w-16 shrink-0`}
       />
       <input
-        ref={(el) => registerNameRef(el)}
         aria-label="Ingredient name"
         placeholder="Ingredient"
         value={ingredient.name}
