@@ -32,6 +32,13 @@ export async function uploadRecipeImage(blob: Blob): Promise<string> {
   return path;
 }
 
+/** Downloads the actual image bytes — used for backup export, not display (see resolveRecipeImageUrl for that). */
+export async function downloadRecipeImage(path: string): Promise<Blob> {
+  const { data, error } = await supabase.storage.from(BUCKET).download(path);
+  if (error) throw error;
+  return data;
+}
+
 /** Best-effort cleanup for a replaced or removed photo — never throws. */
 export async function deleteRecipeImage(path: string): Promise<void> {
   const { error } = await supabase.storage.from(BUCKET).remove([path]);

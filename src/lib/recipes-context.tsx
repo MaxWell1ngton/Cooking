@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -23,6 +24,8 @@ interface RecipesContextValue {
   addRecipe: (input: RecipeInput) => Promise<Recipe>;
   editRecipe: (id: string, input: RecipeInput) => Promise<Recipe>;
   deleteRecipe: (id: string) => Promise<void>;
+  /** Re-fetches from the repository — for writes that happen outside these methods (e.g. bulk import). */
+  refresh: () => Promise<void>;
 }
 
 const RecipesContext = createContext<RecipesContextValue | null>(null);
@@ -40,42 +43,44 @@ export function RecipesProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadIsSlow, setLoadIsSlow] = useState(false);
+  const activeRef = useRef(true);
 
-  useEffect(() => {
-    let active = true;
-
-    if ("serviceWorker" in navigator) {
-      console.info(
-        "[cookbook] service worker controller at load start:",
-        navigator.serviceWorker.controller?.scriptURL ?? "(none)",
-      );
-      navigator.serviceWorker.getRegistrations().then((registrations) => {
+  const load = useCallback((isInitialLoad: boolean) => {
+    if (isInitialLoad) {
+      if ("serviceWorker" in navigator) {
         console.info(
-          `[cookbook] service worker registrations: ${registrations.length}`,
-          registrations.map((r) => ({
-            scope: r.scope,
-            active: r.active?.scriptURL,
-            waiting: r.waiting?.scriptURL,
-            installing: r.installing?.scriptURL,
-          })),
+          "[cookbook] service worker controller at load start:",
+          navigator.serviceWorker.controller?.scriptURL ?? "(none)",
         );
-      });
+        navigator.serviceWorker.getRegistrations().then((registrations) => {
+          console.info(
+            `[cookbook] service worker registrations: ${registrations.length}`,
+            registrations.map((r) => ({
+              scope: r.scope,
+              active: r.active?.scriptURL,
+              waiting: r.waiting?.scriptURL,
+              installing: r.installing?.scriptURL,
+            })),
+          );
+        });
+      }
+      console.info("[cookbook] RecipesProvider: calling recipeRepository.list()…");
     }
 
-    console.info("[cookbook] RecipesProvider: calling recipeRepository.list()…");
+    const slowTimer = isInitialLoad
+      ? setTimeout(() => {
+          if (!activeRef.current) return;
+          console.warn(
+            "[cookbook] RecipesProvider: still waiting on recipeRepository.list() after " +
+              `${SLOW_LOAD_MS}ms. A synchronous localStorage read should be near-instant, so this ` +
+              "almost always means the page is running stale/broken JavaScript rather than a real " +
+              "data problem — check for an active service worker first.",
+          );
+          setLoadIsSlow(true);
+        }, SLOW_LOAD_MS)
+      : undefined;
 
-    const slowTimer = setTimeout(() => {
-      if (!active) return;
-      console.warn(
-        "[cookbook] RecipesProvider: still waiting on recipeRepository.list() after " +
-          `${SLOW_LOAD_MS}ms. A synchronous localStorage read should be near-instant, so this ` +
-          "almost always means the page is running stale/broken JavaScript rather than a real " +
-          "data problem — check for an active service worker first.",
-      );
-      setLoadIsSlow(true);
-    }, SLOW_LOAD_MS);
-
-    recipeRepository
+    return recipeRepository
       .list()
       .then((data) => {
         console.info(`[cookbook] RecipesProvider: recipeRepository.list() resolved with ${data.length} recipe(s).`, data);
@@ -83,22 +88,27 @@ export function RecipesProvider({ children }: { children: ReactNode }) {
       })
       .catch((error: unknown) => {
         console.error("[cookbook] RecipesProvider: recipeRepository.list() rejected.", error);
-        if (active) setLoadError(error instanceof Error ? error.message : String(error));
+        if (activeRef.current && isInitialLoad) setLoadError(error instanceof Error ? error.message : String(error));
         return [] as Recipe[];
       })
       .then((data) => {
-        clearTimeout(slowTimer);
-        if (!active) return;
+        if (slowTimer) clearTimeout(slowTimer);
+        if (!activeRef.current) return;
         setRecipes([...data].sort(byUpdatedDesc));
         setIsLoading(false);
         setLoadIsSlow(false);
       });
-
-    return () => {
-      active = false;
-      clearTimeout(slowTimer);
-    };
   }, []);
+
+  useEffect(() => {
+    activeRef.current = true;
+    void load(true);
+    return () => {
+      activeRef.current = false;
+    };
+  }, [load]);
+
+  const refresh = useCallback(() => load(false), [load]);
 
   const getRecipe = useCallback(
     (id: string) => recipes.find((recipe) => recipe.id === id),
@@ -125,8 +135,8 @@ export function RecipesProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ recipes, isLoading, loadError, loadIsSlow, getRecipe, addRecipe, editRecipe, deleteRecipe }),
-    [recipes, isLoading, loadError, loadIsSlow, getRecipe, addRecipe, editRecipe, deleteRecipe],
+    () => ({ recipes, isLoading, loadError, loadIsSlow, getRecipe, addRecipe, editRecipe, deleteRecipe, refresh }),
+    [recipes, isLoading, loadError, loadIsSlow, getRecipe, addRecipe, editRecipe, deleteRecipe, refresh],
   );
 
   return <RecipesContext.Provider value={value}>{children}</RecipesContext.Provider>;
