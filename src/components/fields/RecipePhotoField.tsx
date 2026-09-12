@@ -85,7 +85,7 @@ export function RecipePhotoField({ value, onChange }: RecipePhotoFieldProps) {
 
   return (
     <div>
-      <span className="text-sm font-medium text-stone-700 dark:text-stone-300">Photo (optional)</span>
+      <span className="text-sm font-medium text-stone-700 dark:text-stone-300">Photo</span>
       <div className="mt-2">
         <div className={boxClass}>
           {/* The whole box is the control: tapping it opens the picker

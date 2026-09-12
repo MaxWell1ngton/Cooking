@@ -86,17 +86,21 @@ export function RecipeForm({ initialRecipe, onSubmit, cancelHref }: RecipeFormPr
 
     const cleanSteps = steps.map((row) => row.value.trim()).filter(Boolean);
     const cleanVariations = variations.map((row) => row.value.trim()).filter(Boolean);
+    const cleanNotes = notes.trim();
+    const hasPhoto = photoState.status === "pending" || (photoState.status === "unchanged" && !!photoState.path);
 
-    if (!cleanTitle) {
-      setError("Give the recipe a title.");
-      return;
-    }
-    if (cleanIngredients.length === 0) {
-      setError("Add at least one ingredient.");
-      return;
-    }
-    if (cleanSteps.length === 0) {
-      setError("Add at least one step.");
+    // Every field is individually optional — the only requirement is that
+    // the recipe isn't entirely empty.
+    const hasAnyContent =
+      cleanTitle.length > 0 ||
+      cleanIngredients.length > 0 ||
+      cleanSteps.length > 0 ||
+      cleanVariations.length > 0 ||
+      cleanNotes.length > 0 ||
+      hasPhoto;
+
+    if (!hasAnyContent) {
+      setError("Add at least something before saving — a title, an ingredient, a step, or anything else.");
       return;
     }
 
@@ -124,7 +128,7 @@ export function RecipeForm({ initialRecipe, onSubmit, cancelHref }: RecipeFormPr
         ingredientGroups: cleanIngredientGroups,
         steps: cleanSteps,
         variations: cleanVariations,
-        notes: notes.trim(),
+        notes: cleanNotes,
         imageUrl,
       });
 
@@ -168,7 +172,7 @@ export function RecipeForm({ initialRecipe, onSubmit, cancelHref }: RecipeFormPr
       />
 
       <EditableList
-        label="Variations (optional)"
+        label="Variations"
         rows={variations}
         onChange={setVariations}
         placeholder="e.g. swap butter for olive oil"
@@ -177,7 +181,7 @@ export function RecipeForm({ initialRecipe, onSubmit, cancelHref }: RecipeFormPr
 
       <div>
         <label htmlFor="notes" className="text-sm font-medium text-stone-700 dark:text-stone-300">
-          Notes (optional)
+          Notes
         </label>
         <textarea
           id="notes"

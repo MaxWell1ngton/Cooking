@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Recipe } from "@/types/recipe";
 import { RecipeImage } from "@/components/RecipeImage";
+import { formatRecipeTitle } from "@/lib/format";
 
 export function RecipeCard({ recipe }: { recipe: Recipe }) {
   return (
@@ -11,7 +12,7 @@ export function RecipeCard({ recipe }: { recipe: Recipe }) {
       <RecipeImage path={recipe.imageUrl} alt="" className="h-16 w-16 shrink-0 rounded-xl object-cover" />
       <div className="min-w-0">
         <h2 className="truncate font-serif text-lg font-semibold text-stone-900 dark:text-stone-100">
-          {recipe.title}
+          {formatRecipeTitle(recipe.title)}
         </h2>
         <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
           {recipe.ingredients.length} ingredient{recipe.ingredients.length === 1 ? "" : "s"} ·{" "}

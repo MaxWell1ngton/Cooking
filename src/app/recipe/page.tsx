@@ -4,7 +4,7 @@ import { Suspense, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useRecipes } from "@/lib/recipes-context";
-import { formatDate, formatIngredient } from "@/lib/format";
+import { formatDate, formatIngredient, formatRecipeTitle } from "@/lib/format";
 import { groupIngredients } from "@/lib/ingredient-groups";
 import { scaleQuantityDisplay } from "@/lib/recipe-scaling";
 import { ConfirmDialog, type ConfirmDialogHandle } from "@/components/ConfirmDialog";
@@ -42,6 +42,8 @@ function RecipeDetail() {
     void deleteRecipe(recipe.id);
   };
 
+  const displayTitle = formatRecipeTitle(recipe.title);
+
   return (
     <article className="space-y-8">
       <div>
@@ -50,12 +52,12 @@ function RecipeDetail() {
         </Link>
         <RecipeImage
           path={recipe.imageUrl}
-          alt={recipe.title}
+          alt={displayTitle}
           className="mt-3 h-64 w-full rounded-2xl object-cover sm:h-80"
         />
         <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
           <h1 className="font-serif text-3xl font-semibold text-stone-900 dark:text-stone-100">
-            {recipe.title}
+            {displayTitle}
           </h1>
           <div className="flex shrink-0 gap-2">
             <Link
@@ -79,53 +81,57 @@ function RecipeDetail() {
         </p>
       </div>
 
-      <section>
-        <h2 className="font-serif text-lg font-semibold text-stone-900 dark:text-stone-100">
-          Ingredients
-        </h2>
-        <div className="mt-3">
-          <RecipeScaler scale={scale} onChange={setScale} />
-        </div>
-        <div className="mt-4 space-y-4">
-          {groupIngredients(recipe.ingredients, recipe.ingredientGroups).map((section) => (
-            <div key={section.id ?? "ungrouped"}>
-              {section.name && (
-                <h3 className="font-serif text-base font-semibold text-stone-800 dark:text-stone-200">
-                  {section.name}
-                </h3>
-              )}
-              <ul className={section.name ? "mt-2 space-y-1.5" : "space-y-1.5"}>
-                {section.ingredients.map((ingredient) => (
-                  <li
-                    key={ingredient.id}
-                    className="flex gap-2 text-base leading-relaxed text-stone-700 dark:text-stone-300"
-                  >
-                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-600" />
-                    {formatIngredient({ ...ingredient, quantity: scaleQuantityDisplay(ingredient.quantity, scale) })}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </section>
+      {recipe.ingredients.length > 0 && (
+        <section>
+          <h2 className="font-serif text-lg font-semibold text-stone-900 dark:text-stone-100">
+            Ingredients
+          </h2>
+          <div className="mt-3">
+            <RecipeScaler scale={scale} onChange={setScale} />
+          </div>
+          <div className="mt-4 space-y-4">
+            {groupIngredients(recipe.ingredients, recipe.ingredientGroups).map((section) => (
+              <div key={section.id ?? "ungrouped"}>
+                {section.name && (
+                  <h3 className="font-serif text-base font-semibold text-stone-800 dark:text-stone-200">
+                    {section.name}
+                  </h3>
+                )}
+                <ul className={section.name ? "mt-2 space-y-1.5" : "space-y-1.5"}>
+                  {section.ingredients.map((ingredient) => (
+                    <li
+                      key={ingredient.id}
+                      className="flex gap-2 text-base leading-relaxed text-stone-700 dark:text-stone-300"
+                    >
+                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-600" />
+                      {formatIngredient({ ...ingredient, quantity: scaleQuantityDisplay(ingredient.quantity, scale) })}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
-      <section>
-        <h2 className="font-serif text-lg font-semibold text-stone-900 dark:text-stone-100">Steps</h2>
-        <ol className="mt-3 space-y-4">
-          {recipe.steps.map((step, index) => (
-            <li
-              key={index}
-              className="flex gap-3 text-base leading-relaxed text-stone-700 dark:text-stone-300"
-            >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm font-semibold text-amber-800 dark:bg-amber-900 dark:text-amber-200">
-                {index + 1}
-              </span>
-              <p className="pt-0.5">{step}</p>
-            </li>
-          ))}
-        </ol>
-      </section>
+      {recipe.steps.length > 0 && (
+        <section>
+          <h2 className="font-serif text-lg font-semibold text-stone-900 dark:text-stone-100">Steps</h2>
+          <ol className="mt-3 space-y-4">
+            {recipe.steps.map((step, index) => (
+              <li
+                key={index}
+                className="flex gap-3 text-base leading-relaxed text-stone-700 dark:text-stone-300"
+              >
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-sm font-semibold text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                  {index + 1}
+                </span>
+                <p className="pt-0.5">{step}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
 
       {recipe.variations.length > 0 && (
         <section>
@@ -151,7 +157,7 @@ function RecipeDetail() {
 
       <ConfirmDialog
         ref={dialogRef}
-        title={`Delete "${recipe.title}"?`}
+        title={`Delete "${displayTitle}"?`}
         description="This can't be undone."
         confirmLabel="Delete"
         destructive
