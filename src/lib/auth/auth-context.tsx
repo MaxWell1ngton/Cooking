@@ -9,11 +9,16 @@ interface AuthResult {
   error: string | null;
 }
 
+interface SignUpResult extends AuthResult {
+  /** True when the project requires email confirmation, so sign-up succeeded but no session was issued yet. */
+  needsEmailConfirmation: boolean;
+}
+
 interface AuthContextValue {
   user: User | null;
   isLoading: boolean;
   signInWithPassword: (email: string, password: string) => Promise<AuthResult>;
-  signUp: (email: string, password: string) => Promise<AuthResult>;
+  signUp: (email: string, password: string) => Promise<SignUpResult>;
   signOut: () => Promise<void>;
 }
 
@@ -63,9 +68,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null };
   };
 
-  const signUp = async (email: string, password: string): Promise<AuthResult> => {
-    const { error } = await supabase.auth.signUp({ email, password });
-    return { error: error?.message ?? null };
+  const signUp = async (email: string, password: string): Promise<SignUpResult> => {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    // Supabase issues a session immediately only when the project's email
+    // confirmation requirement is off; otherwise `user` comes back but
+    // `session` is null until the confirmation link is clicked.
+    return { error: error?.message ?? null, needsEmailConfirmation: !error && !data.session };
   };
 
   const signOut = async () => {
