@@ -14,6 +14,8 @@ import {
 import type { Ingredient, Recipe, RecipeInput } from "@/types/recipe";
 import { EditableList, type ListRow } from "@/components/fields/EditableList";
 import { IngredientFields } from "@/components/fields/IngredientFields";
+import { RecipePhotoField, type PhotoState } from "@/components/fields/RecipePhotoField";
+import { uploadRecipeImage, deleteRecipeImage } from "@/lib/supabase/recipe-images";
 
 interface RecipeFormProps {
   initialRecipe?: Recipe;
@@ -53,6 +55,7 @@ export function RecipeForm({ initialRecipe, onSubmit, cancelHref }: RecipeFormPr
   const [steps, setSteps] = useState<ListRow[]>(() => toRows(initialRecipe?.steps ?? []));
   const [variations, setVariations] = useState<ListRow[]>(() => toRows(initialRecipe?.variations ?? []));
   const [notes, setNotes] = useState(initialRecipe?.notes ?? "");
+  const [photoState, setPhotoState] = useState<PhotoState>({ status: "unchanged", path: initialRecipe?.imageUrl });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -100,6 +103,21 @@ export function RecipeForm({ initialRecipe, onSubmit, cancelHref }: RecipeFormPr
     setError(null);
     setIsSubmitting(true);
     try {
+      // Uploading (or not) happens here rather than as soon as a photo is
+      // picked, so cancelling out of the form never leaves an orphaned file.
+      let imageUrl: string | undefined;
+      let pathToDelete: string | undefined;
+
+      if (photoState.status === "pending") {
+        imageUrl = await uploadRecipeImage(photoState.blob);
+        pathToDelete = initialRecipe?.imageUrl;
+      } else if (photoState.status === "removed") {
+        imageUrl = undefined;
+        pathToDelete = initialRecipe?.imageUrl;
+      } else {
+        imageUrl = photoState.path;
+      }
+
       const recipe = await onSubmit({
         title: cleanTitle,
         ingredients: cleanIngredients,
@@ -107,7 +125,12 @@ export function RecipeForm({ initialRecipe, onSubmit, cancelHref }: RecipeFormPr
         steps: cleanSteps,
         variations: cleanVariations,
         notes: notes.trim(),
+        imageUrl,
       });
+
+      // Best-effort: the recipe already saved successfully either way.
+      if (pathToDelete) void deleteRecipeImage(pathToDelete);
+
       router.push(`/recipe/?id=${recipe.id}`);
     } catch {
       setError("Something went wrong saving this recipe. Please try again.");
@@ -129,6 +152,8 @@ export function RecipeForm({ initialRecipe, onSubmit, cancelHref }: RecipeFormPr
           className={inputClass}
         />
       </div>
+
+      <RecipePhotoField value={photoState} onChange={setPhotoState} />
 
       <IngredientFields value={ingredientsValue} onChange={setIngredientsValue} />
 

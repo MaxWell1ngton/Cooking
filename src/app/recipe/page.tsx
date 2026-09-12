@@ -1,13 +1,16 @@
 "use client";
 
-import { Suspense, useRef } from "react";
+import { Suspense, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useRecipes } from "@/lib/recipes-context";
 import { formatDate, formatIngredient } from "@/lib/format";
 import { groupIngredients } from "@/lib/ingredient-groups";
+import { scaleQuantityDisplay } from "@/lib/recipe-scaling";
 import { ConfirmDialog, type ConfirmDialogHandle } from "@/components/ConfirmDialog";
 import { RecipeLoadStatus } from "@/components/RecipeLoadStatus";
+import { RecipeScaler } from "@/components/RecipeScaler";
+import { RecipeImage } from "@/components/RecipeImage";
 
 function RecipeDetail() {
   const router = useRouter();
@@ -15,6 +18,7 @@ function RecipeDetail() {
   const id = searchParams.get("id") ?? "";
   const { isLoading, loadError, getRecipe, deleteRecipe } = useRecipes();
   const dialogRef = useRef<ConfirmDialogHandle>(null);
+  const [scale, setScale] = useState(100);
 
   const recipe = getRecipe(id);
 
@@ -44,6 +48,11 @@ function RecipeDetail() {
         <Link href="/" className="text-sm text-amber-700 hover:text-amber-800 dark:text-amber-500">
           ← All recipes
         </Link>
+        <RecipeImage
+          path={recipe.imageUrl}
+          alt={recipe.title}
+          className="mt-3 h-64 w-full rounded-2xl object-cover sm:h-80"
+        />
         <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
           <h1 className="font-serif text-3xl font-semibold text-stone-900 dark:text-stone-100">
             {recipe.title}
@@ -74,7 +83,10 @@ function RecipeDetail() {
         <h2 className="font-serif text-lg font-semibold text-stone-900 dark:text-stone-100">
           Ingredients
         </h2>
-        <div className="mt-3 space-y-4">
+        <div className="mt-3">
+          <RecipeScaler scale={scale} onChange={setScale} />
+        </div>
+        <div className="mt-4 space-y-4">
           {groupIngredients(recipe.ingredients, recipe.ingredientGroups).map((section) => (
             <div key={section.id ?? "ungrouped"}>
               {section.name && (
@@ -89,7 +101,7 @@ function RecipeDetail() {
                     className="flex gap-2 text-base leading-relaxed text-stone-700 dark:text-stone-300"
                   >
                     <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-600" />
-                    {formatIngredient(ingredient)}
+                    {formatIngredient({ ...ingredient, quantity: scaleQuantityDisplay(ingredient.quantity, scale) })}
                   </li>
                 ))}
               </ul>

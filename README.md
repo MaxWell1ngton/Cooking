@@ -4,7 +4,7 @@ A personal, installable, offline-friendly cookbook for your own recipes. Built w
 
 ## Getting started
 
-1. Create a Supabase project, then run [supabase/schema.sql](supabase/schema.sql) in its SQL editor (Project → SQL Editor → New query) to create the `recipes` table and its Row Level Security policies.
+1. Create a Supabase project, then run [supabase/schema.sql](supabase/schema.sql) in its SQL editor (Project → SQL Editor → New query) to create the `recipes` table, the private `recipe-images` Storage bucket, and their Row Level Security policies. If you already ran an earlier version of this script, running it again is safe — it only adds what's missing (the `image_path` column, the bucket, the storage policies).
 2. Copy `.env.local.example` to `.env.local` and fill in your project's URL and anon key (Project Settings → API).
 3. ```bash
    npm run dev
@@ -36,6 +36,7 @@ For it to install as a PWA, it needs to be served over HTTPS (or `localhost`).
 - **Shared state** — [src/lib/recipes-context.tsx](src/lib/recipes-context.tsx) loads recipes once via the repository and exposes them (plus create/edit/delete) to every page through React context. A future feature (e.g. a meal-planning calendar) can read from the same context.
 - **Pages** — `/` (list + search), `/recipe/?id=` (detail), `/recipe/new/` (add), `/recipe/edit/?id=` (edit). Recipe identity is passed via a query string rather than a dynamic route segment (`/recipe/[id]`) because this app is a static export with client-generated IDs — see note below.
 - **PWA** — [public/manifest.webmanifest](public/manifest.webmanifest) + [public/sw.js](public/sw.js) (hand-written service worker, no build plugin). The service worker precaches the app shell and its assets on install and applies cache-first/stale-while-revalidate/network-first strategies at runtime, so previously-visited pages keep working offline. Icons are in `public/icons/` (simple placeholders — swap them for a real logo whenever).
+- **Photos** — `Recipe.imageUrl` ([types/recipe.ts](src/types/recipe.ts)) actually holds a Supabase Storage *path*, not a public URL: the `recipe-images` bucket is private (RLS-scoped per user, same as the `recipes` table), so there's no stable URL to store. [RecipeImage.tsx](src/components/RecipeImage.tsx) resolves a fresh short-lived signed URL from that path on every render via [use-recipe-image-url.ts](src/lib/use-recipe-image-url.ts) / [recipe-images.ts](src/lib/supabase/recipe-images.ts), and renders nothing at all (not a placeholder graphic) when there's no path. In the form, [RecipePhotoField.tsx](src/components/fields/RecipePhotoField.tsx) resizes/recompresses a selected photo to a bounded JPEG client-side ([image-compression.ts](src/lib/image-compression.ts)) before it's actually uploaded on save; replacing or removing a photo deletes the old storage object afterward (best-effort), as does deleting a recipe that has one.
 
 ### Why static export (`output: "export"` in [next.config.ts](next.config.ts))
 

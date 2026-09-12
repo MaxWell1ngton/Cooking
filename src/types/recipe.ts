@@ -21,6 +21,14 @@ export interface Recipe {
   steps: string[];
   variations: string[];
   notes: string;
+  /**
+   * A Supabase Storage object path (e.g. "<user_id>/<id>.jpg"), not a
+   * directly-usable URL — the image bucket is private, so a display URL is
+   * resolved from this path on read (see src/lib/supabase/recipe-images.ts).
+   * Absent for recipes with no photo, including every recipe saved before
+   * this field existed.
+   */
+  imageUrl?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -32,4 +40,5 @@ export interface RecipeInput {
   steps: string[];
   variations: string[];
   notes: string;
+  imageUrl?: string;
 }

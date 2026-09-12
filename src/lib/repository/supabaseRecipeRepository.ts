@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase/client";
 import { createId } from "@/lib/id";
+import { deleteRecipeImage } from "@/lib/supabase/recipe-images";
 import type { Ingredient, IngredientGroup, Recipe, RecipeInput } from "@/types/recipe";
 import type { RecipeRepository } from "./types";
 
@@ -17,6 +18,7 @@ interface RecipeRow {
   steps: string[] | null;
   variations: string[] | null;
   notes: string | null;
+  image_path: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -30,6 +32,7 @@ function rowToRecipe(row: RecipeRow): Recipe {
     steps: row.steps ?? [],
     variations: row.variations ?? [],
     notes: row.notes ?? "",
+    imageUrl: row.image_path ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -51,6 +54,7 @@ export function recipeToRow(recipe: Recipe, userId: string): RecipeRow {
     steps: recipe.steps,
     variations: recipe.variations,
     notes: recipe.notes,
+    image_path: recipe.imageUrl ?? null,
     created_at: recipe.createdAt,
     updated_at: recipe.updatedAt,
   };
@@ -100,6 +104,7 @@ export class SupabaseRecipeRepository implements RecipeRepository {
       steps: input.steps,
       variations: input.variations,
       notes: input.notes,
+      image_path: input.imageUrl ?? null,
       updated_at: new Date().toISOString(),
     };
 
@@ -109,7 +114,11 @@ export class SupabaseRecipeRepository implements RecipeRepository {
   }
 
   async remove(id: string): Promise<void> {
+    const existing = await this.get(id);
     const { error } = await supabase.from(TABLE).delete().eq("id", id);
     if (error) throw error;
+    // Best-effort: the recipe is already gone even if this fails, and a
+    // stray file in a private bucket isn't worth failing the delete over.
+    if (existing?.imageUrl) void deleteRecipeImage(existing.imageUrl);
   }
 }
