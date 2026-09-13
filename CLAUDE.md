@@ -101,6 +101,11 @@ be included/restored, rather than failing silently (`src/lib/backup/`).
 - Verify every feature via real Playwright-driven-Edge testing (no
   computer-use tool available), not just lint/build. When a mock's behavior
   is uncertain, discover the real wire format empirically first.
+- If you stop the `npm run dev` server for any reason (e.g. to run a build
+  or lint check, or to free the port), always restart it afterward before
+  finishing your response, so the dev server is left running for the user.
+  Don't leave it stopped without explicitly telling the user it's stopped
+  and why.
 
 ## Next steps / not yet done
 
