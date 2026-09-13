@@ -39,7 +39,7 @@ function ImageFailureNotice({ failures, verb }: { failures: ImageFailure[]; verb
 
 export default function SettingsPage() {
   const { recipes, refresh } = useRecipes();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [exportState, setExportState] = useState<ExportState>({ status: "idle" });
   const [importState, setImportState] = useState<ImportState>({ status: "idle" });
   const importDialogRef = useRef<ImportDuplicateDialogHandle>(null);
@@ -197,6 +197,20 @@ export default function SettingsPage() {
             {importState.message}
           </p>
         )}
+      </section>
+
+      <section className="rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-800 dark:bg-stone-900">
+        <h2 className="font-serif text-lg font-semibold text-stone-900 dark:text-stone-100">Account</h2>
+        <p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
+          Signed in as {user?.email ?? "unknown"}.
+        </p>
+        <button
+          type="button"
+          onClick={() => void signOut()}
+          className="mt-4 rounded-full border border-stone-300 px-5 py-2.5 text-sm font-semibold text-stone-700 hover:bg-stone-100 dark:border-stone-700 dark:text-stone-200 dark:hover:bg-stone-800"
+        >
+          Sign out
+        </button>
       </section>
 
       <ImportDuplicateDialog ref={importDialogRef} />
