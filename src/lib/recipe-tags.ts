@@ -1,4 +1,2 @@
-/** Fixed set of category options offered in the recipe form and list filter. */
-export const RECIPE_CATEGORIES = ["Breakfast", "Appetizer", "Main", "Dessert"] as const;
-
-export type RecipeCategory = (typeof RECIPE_CATEGORIES)[number];
+/** Quick-pick tag suggestions offered in the recipe form — not an exhaustive enum, since custom tags are also allowed. */
+export const PRESET_TAGS = ["Breakfast", "Appetizer", "Main", "Dessert"] as const;

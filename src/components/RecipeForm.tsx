@@ -12,8 +12,9 @@ import {
   type IngredientsValue,
 } from "@/lib/ingredient-groups";
 import type { Ingredient, Recipe, RecipeInput } from "@/types/recipe";
-import { RECIPE_CATEGORIES } from "@/lib/recipe-categories";
+import { PRESET_TAGS } from "@/lib/recipe-tags";
 import { EditableList, type ListRow } from "@/components/fields/EditableList";
+import { TagPicker } from "@/components/fields/TagPicker";
 import { IngredientFields } from "@/components/fields/IngredientFields";
 import { RecipePhotoField, type PhotoState } from "@/components/fields/RecipePhotoField";
 import { uploadRecipeImage, deleteRecipeImage } from "@/lib/supabase/recipe-images";
@@ -56,7 +57,7 @@ export function RecipeForm({ initialRecipe, onSubmit, cancelHref }: RecipeFormPr
   const [steps, setSteps] = useState<ListRow[]>(() => toRows(initialRecipe?.steps ?? []));
   const [variations, setVariations] = useState<ListRow[]>(() => toRows(initialRecipe?.variations ?? []));
   const [notes, setNotes] = useState(initialRecipe?.notes ?? "");
-  const [category, setCategory] = useState(initialRecipe?.category ?? "");
+  const [tags, setTags] = useState<string[]>(initialRecipe?.tags ?? []);
   const [photoState, setPhotoState] = useState<PhotoState>({ status: "unchanged", path: initialRecipe?.imageUrl });
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -99,7 +100,7 @@ export function RecipeForm({ initialRecipe, onSubmit, cancelHref }: RecipeFormPr
       cleanSteps.length > 0 ||
       cleanVariations.length > 0 ||
       cleanNotes.length > 0 ||
-      category.length > 0 ||
+      tags.length > 0 ||
       hasPhoto;
 
     if (!hasAnyContent) {
@@ -133,7 +134,7 @@ export function RecipeForm({ initialRecipe, onSubmit, cancelHref }: RecipeFormPr
         variations: cleanVariations,
         notes: cleanNotes,
         imageUrl,
-        category: category || undefined,
+        tags,
       });
 
       // Best-effort: the recipe already saved successfully either way.
@@ -162,22 +163,10 @@ export function RecipeForm({ initialRecipe, onSubmit, cancelHref }: RecipeFormPr
       </div>
 
       <div>
-        <label htmlFor="category" className="text-sm font-medium text-stone-700 dark:text-stone-300">
-          Category
-        </label>
-        <select
-          id="category"
-          value={category}
-          onChange={(event) => setCategory(event.target.value)}
-          className={`${inputClass} font-sans text-base`}
-        >
-          <option value="">No category</option>
-          {RECIPE_CATEGORIES.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+        <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Tags</label>
+        <div className="mt-2">
+          <TagPicker tags={tags} onChange={setTags} presets={PRESET_TAGS} />
+        </div>
       </div>
 
       <RecipePhotoField value={photoState} onChange={setPhotoState} />

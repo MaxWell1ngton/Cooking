@@ -92,6 +92,23 @@ export function RecipeCard({ recipe, selectionMode, selected, onEnterSelection, 
           {recipe.ingredients.length} ingredient{recipe.ingredients.length === 1 ? "" : "s"} ·{" "}
           {recipe.steps.length} step{recipe.steps.length === 1 ? "" : "s"}
         </p>
+        {recipe.tags && recipe.tags.length > 0 && (
+          <div className="mt-1.5 flex flex-wrap gap-1">
+            {recipe.tags.slice(0, 3).map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900 dark:text-amber-200"
+              >
+                {tag}
+              </span>
+            ))}
+            {recipe.tags.length > 3 && (
+              <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-500 dark:bg-stone-800 dark:text-stone-400">
+                +{recipe.tags.length - 3}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </Link>
   );

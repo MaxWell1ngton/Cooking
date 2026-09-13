@@ -76,6 +76,18 @@ function RecipeDetail() {
             </button>
           </div>
         </div>
+        {recipe.tags && recipe.tags.length > 0 && (
+          <div aria-label="Tags" className="mt-2 flex flex-wrap gap-1.5">
+            {recipe.tags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800 dark:bg-amber-900 dark:text-amber-200"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
         <p className="mt-1 text-xs text-stone-400 dark:text-stone-500">
           Added {formatDate(recipe.createdAt)}
           {recipe.updatedAt !== recipe.createdAt ? ` · Updated ${formatDate(recipe.updatedAt)}` : ""}

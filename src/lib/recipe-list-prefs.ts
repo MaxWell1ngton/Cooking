@@ -2,12 +2,12 @@ export type RecipeSortOption = "dateAdded" | "lastEdited" | "alphabetical";
 
 export interface RecipeListPrefs {
   sort: RecipeSortOption;
-  category: string; // "" means "all categories"
+  tag: string; // "" means "all tags"
 }
 
 const STORAGE_KEY = "cookbook.recipeListPrefs.v1";
 
-const DEFAULT_PREFS: RecipeListPrefs = { sort: "lastEdited", category: "" };
+const DEFAULT_PREFS: RecipeListPrefs = { sort: "lastEdited", tag: "" };
 
 /**
  * A view preference (sort/filter choice), not recipe data — kept in
@@ -22,7 +22,9 @@ export function loadRecipeListPrefs(): RecipeListPrefs {
     const parsed = JSON.parse(raw);
     return {
       sort: parsed?.sort === "dateAdded" || parsed?.sort === "alphabetical" || parsed?.sort === "lastEdited" ? parsed.sort : DEFAULT_PREFS.sort,
-      category: typeof parsed?.category === "string" ? parsed.category : DEFAULT_PREFS.category,
+      // Falls back to "" (all tags) for prefs saved before the category->tags
+      // rename, rather than crashing on the old shape.
+      tag: typeof parsed?.tag === "string" ? parsed.tag : DEFAULT_PREFS.tag,
     };
   } catch {
     return DEFAULT_PREFS;

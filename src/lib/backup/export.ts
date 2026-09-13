@@ -85,7 +85,7 @@ export async function exportBackup(
       variations: recipe.variations,
       notes: recipe.notes,
       imageFile,
-      category: recipe.category,
+      tags: recipe.tags,
       createdAt: recipe.createdAt,
       updatedAt: recipe.updatedAt,
     });

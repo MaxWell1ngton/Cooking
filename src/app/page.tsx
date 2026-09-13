@@ -6,7 +6,6 @@ import { useRecipes } from "@/lib/recipes-context";
 import { RecipeCard } from "@/components/RecipeCard";
 import { RecipeLoadStatus } from "@/components/RecipeLoadStatus";
 import { ConfirmDialog, type ConfirmDialogHandle } from "@/components/ConfirmDialog";
-import { RECIPE_CATEGORIES } from "@/lib/recipe-categories";
 import { formatRecipeTitle } from "@/lib/format";
 import { loadRecipeListPrefs, saveRecipeListPrefs, type RecipeSortOption } from "@/lib/recipe-list-prefs";
 import type { Recipe } from "@/types/recipe";
@@ -34,7 +33,7 @@ export default function HomePage() {
   // since loadRecipeListPrefs() guards for no `window`) rather than an
   // effect, so there's no separate "has this loaded yet" state to track.
   const [sort, setSort] = useState<RecipeSortOption>(() => loadRecipeListPrefs().sort);
-  const [category, setCategory] = useState(() => loadRecipeListPrefs().category);
+  const [tagFilter, setTagFilter] = useState(() => loadRecipeListPrefs().tag);
 
   // No separate "selection mode" flag to keep in sync — it's just whether
   // anything is selected, so deselecting the last card naturally exits it.
@@ -44,13 +43,23 @@ export default function HomePage() {
   const deleteDialogRef = useRef<ConfirmDialogHandle>(null);
 
   useEffect(() => {
-    saveRecipeListPrefs({ sort, category });
-  }, [sort, category]);
+    saveRecipeListPrefs({ sort, tag: tagFilter });
+  }, [sort, tagFilter]);
+
+  // Filter options are every tag actually in use, not just the form's preset
+  // list — so a custom tag someone added is still filterable.
+  const availableTags = useMemo(() => {
+    const seen = new Set<string>();
+    for (const recipe of recipes) {
+      for (const tag of recipe.tags ?? []) seen.add(tag);
+    }
+    return [...seen].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  }, [recipes]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     let list = recipes;
-    if (category) list = list.filter((recipe) => recipe.category === category);
+    if (tagFilter) list = list.filter((recipe) => recipe.tags?.includes(tagFilter));
     if (q) {
       list = list.filter((recipe) => {
         if (recipe.title.toLowerCase().includes(q)) return true;
@@ -58,7 +67,7 @@ export default function HomePage() {
       });
     }
     return sortRecipes(list, sort);
-  }, [recipes, query, category, sort]);
+  }, [recipes, query, tagFilter, sort]);
 
   const enterSelection = (id: string) => setSelectedIds(new Set([id]));
 
@@ -131,22 +140,24 @@ export default function HomePage() {
             <option value="alphabetical">Alphabetical (A-Z)</option>
           </select>
         </label>
-        <label className="flex items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
-          Category
-          <select
-            aria-label="Filter by category"
-            value={category}
-            onChange={(event) => setCategory(event.target.value)}
-            className={controlClass}
-          >
-            <option value="">All categories</option>
-            {RECIPE_CATEGORIES.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </label>
+        {availableTags.length > 0 && (
+          <label className="flex items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
+            Tag
+            <select
+              aria-label="Filter by tag"
+              value={tagFilter}
+              onChange={(event) => setTagFilter(event.target.value)}
+              className={controlClass}
+            >
+              <option value="">All tags</option>
+              {availableTags.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </div>
 
       {filtered.length === 0 ? (

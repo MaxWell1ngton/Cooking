@@ -19,7 +19,7 @@ export interface BackupRecipe {
   variations: string[];
   notes: string;
   imageFile: string | null;
-  category?: string;
+  tags?: string[];
   createdAt: string;
   updatedAt: string;
 }

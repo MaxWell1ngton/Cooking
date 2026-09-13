@@ -64,12 +64,29 @@ create policy "Users can delete their own recipes"
 alter table public.recipes add column if not exists image_path text;
 
 /*
-  A single optional category per recipe (e.g. "Breakfast", "Dessert"), used
-  for filtering the recipe list. Free-text rather than an enum/check
-  constraint, so the app's own fixed option list (src/lib/recipe-categories.ts)
-  can change without a migration. NULL means uncategorized.
+  Tags: replaces the earlier single `category` column with a multi-value
+  jsonb array (string[]), matching how steps/variations are already stored.
+  Free-text rather than an enum/check constraint, so the app's own preset
+  quick-pick list (src/lib/recipe-tags.ts) can change without a migration.
+  The block below is wrapped so it's safe to run again later: it only
+  backfills/drops `category` while that column still exists, rather than
+  erroring out on a second run once it's already gone.
 */
-alter table public.recipes add column if not exists category text;
+alter table public.recipes add column if not exists tags jsonb not null default '[]'::jsonb;
+
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'recipes' and column_name = 'category'
+  ) then
+    update public.recipes
+    set tags = jsonb_build_array(category)
+    where category is not null and tags = '[]'::jsonb;
+
+    alter table public.recipes drop column category;
+  end if;
+end $$;
 
 /*
   A private bucket: objects aren't publicly listable or fetchable by URL

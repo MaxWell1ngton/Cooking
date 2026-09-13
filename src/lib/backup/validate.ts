@@ -39,7 +39,7 @@ function isBackupRecipe(value: unknown): value is BackupRecipe {
     isStringArray(value.variations) &&
     typeof value.notes === "string" &&
     (value.imageFile === null || typeof value.imageFile === "string") &&
-    (value.category === undefined || typeof value.category === "string") &&
+    (value.tags === undefined || isStringArray(value.tags)) &&
     typeof value.createdAt === "string" &&
     typeof value.updatedAt === "string"
   );
