@@ -29,6 +29,8 @@ export interface Recipe {
    * this field existed.
    */
   imageUrl?: string;
+  /** One of RECIPE_CATEGORIES (src/lib/recipe-categories.ts), or absent for uncategorized. */
+  category?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -41,4 +43,5 @@ export interface RecipeInput {
   variations: string[];
   notes: string;
   imageUrl?: string;
+  category?: string;
 }

@@ -19,6 +19,7 @@ interface RecipeRow {
   variations: string[] | null;
   notes: string | null;
   image_path: string | null;
+  category: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -33,6 +34,7 @@ function rowToRecipe(row: RecipeRow): Recipe {
     variations: row.variations ?? [],
     notes: row.notes ?? "",
     imageUrl: row.image_path ?? undefined,
+    category: row.category ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -55,6 +57,7 @@ export function recipeToRow(recipe: Recipe, userId: string): RecipeRow {
     variations: recipe.variations,
     notes: recipe.notes,
     image_path: recipe.imageUrl ?? null,
+    category: recipe.category ?? null,
     created_at: recipe.createdAt,
     updated_at: recipe.updatedAt,
   };
@@ -105,6 +108,7 @@ export class SupabaseRecipeRepository implements RecipeRepository {
       variations: input.variations,
       notes: input.notes,
       image_path: input.imageUrl ?? null,
+      category: input.category ?? null,
       updated_at: new Date().toISOString(),
     };
 

@@ -1,23 +1,87 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRecipes } from "@/lib/recipes-context";
 import { RecipeCard } from "@/components/RecipeCard";
 import { RecipeLoadStatus } from "@/components/RecipeLoadStatus";
+import { ConfirmDialog, type ConfirmDialogHandle } from "@/components/ConfirmDialog";
+import { RECIPE_CATEGORIES } from "@/lib/recipe-categories";
+import { formatRecipeTitle } from "@/lib/format";
+import { loadRecipeListPrefs, saveRecipeListPrefs, type RecipeSortOption } from "@/lib/recipe-list-prefs";
+import type { Recipe } from "@/types/recipe";
+
+const controlClass =
+  "rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100";
+
+function sortRecipes(recipes: Recipe[], sort: RecipeSortOption): Recipe[] {
+  const sorted = [...recipes];
+  if (sort === "dateAdded") {
+    sorted.sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
+  } else if (sort === "alphabetical") {
+    sorted.sort((a, b) => formatRecipeTitle(a.title).localeCompare(formatRecipeTitle(b.title), undefined, { sensitivity: "base" }));
+  } else {
+    sorted.sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""));
+  }
+  return sorted;
+}
 
 export default function HomePage() {
-  const { recipes, isLoading, loadError } = useRecipes();
+  const { recipes, isLoading, loadError, deleteRecipe } = useRecipes();
   const [query, setQuery] = useState("");
+  // Sort/filter are a view preference, not recipe data — read once from
+  // localStorage as the initial state (safe during a build-time prerender,
+  // since loadRecipeListPrefs() guards for no `window`) rather than an
+  // effect, so there's no separate "has this loaded yet" state to track.
+  const [sort, setSort] = useState<RecipeSortOption>(() => loadRecipeListPrefs().sort);
+  const [category, setCategory] = useState(() => loadRecipeListPrefs().category);
+
+  // No separate "selection mode" flag to keep in sync — it's just whether
+  // anything is selected, so deselecting the last card naturally exits it.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const selectionMode = selectedIds.size > 0;
+  const [isDeleting, setIsDeleting] = useState(false);
+  const deleteDialogRef = useRef<ConfirmDialogHandle>(null);
+
+  useEffect(() => {
+    saveRecipeListPrefs({ sort, category });
+  }, [sort, category]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return recipes;
-    return recipes.filter((recipe) => {
-      if (recipe.title.toLowerCase().includes(q)) return true;
-      return recipe.ingredients.some((ingredient) => ingredient.name.toLowerCase().includes(q));
+    let list = recipes;
+    if (category) list = list.filter((recipe) => recipe.category === category);
+    if (q) {
+      list = list.filter((recipe) => {
+        if (recipe.title.toLowerCase().includes(q)) return true;
+        return recipe.ingredients.some((ingredient) => ingredient.name.toLowerCase().includes(q));
+      });
+    }
+    return sortRecipes(list, sort);
+  }, [recipes, query, category, sort]);
+
+  const enterSelection = (id: string) => setSelectedIds(new Set([id]));
+
+  const toggleSelection = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
     });
-  }, [recipes, query]);
+  };
+
+  const cancelSelection = () => setSelectedIds(new Set());
+
+  const handleDeleteSelected = async () => {
+    setIsDeleting(true);
+    try {
+      await Promise.all([...selectedIds].map((id) => deleteRecipe(id)));
+    } finally {
+      setIsDeleting(false);
+      cancelSelection();
+    }
+  };
 
   if (isLoading || loadError) {
     return <RecipeLoadStatus label="Loading recipes…" />;
@@ -43,7 +107,7 @@ export default function HomePage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className={`space-y-4 ${selectionMode ? "pb-20" : ""}`}>
       <input
         type="search"
         value={query}
@@ -52,17 +116,90 @@ export default function HomePage() {
         aria-label="Search recipes"
         className="w-full rounded-xl border border-stone-300 bg-white px-4 py-2.5 text-base text-stone-900 placeholder:text-stone-400 focus:border-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
       />
+
+      <div className="flex flex-wrap gap-2">
+        <label className="flex items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
+          Sort
+          <select
+            aria-label="Sort recipes"
+            value={sort}
+            onChange={(event) => setSort(event.target.value as RecipeSortOption)}
+            className={controlClass}
+          >
+            <option value="lastEdited">Last edited</option>
+            <option value="dateAdded">Date added</option>
+            <option value="alphabetical">Alphabetical (A-Z)</option>
+          </select>
+        </label>
+        <label className="flex items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
+          Category
+          <select
+            aria-label="Filter by category"
+            value={category}
+            onChange={(event) => setCategory(event.target.value)}
+            className={controlClass}
+          >
+            <option value="">All categories</option>
+            {RECIPE_CATEGORIES.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
       {filtered.length === 0 ? (
-        <p className="text-stone-500 dark:text-stone-400">No recipes match &ldquo;{query}&rdquo;.</p>
+        <p className="text-stone-500 dark:text-stone-400">
+          {query ? <>No recipes match &ldquo;{query}&rdquo;.</> : "No recipes match this filter."}
+        </p>
       ) : (
         <ul className="space-y-3">
           {filtered.map((recipe) => (
             <li key={recipe.id}>
-              <RecipeCard recipe={recipe} />
+              <RecipeCard
+                recipe={recipe}
+                selectionMode={selectionMode}
+                selected={selectedIds.has(recipe.id)}
+                onEnterSelection={enterSelection}
+                onToggleSelection={toggleSelection}
+              />
             </li>
           ))}
         </ul>
       )}
+
+      {selectionMode && (
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-stone-200 bg-white/95 px-4 py-3 backdrop-blur dark:border-stone-800 dark:bg-stone-950/95">
+          <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 sm:px-2">
+            <button
+              type="button"
+              onClick={cancelSelection}
+              className="rounded-full px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
+            >
+              Cancel
+            </button>
+            <span className="text-sm text-stone-500 dark:text-stone-400">{selectedIds.size} selected</span>
+            <button
+              type="button"
+              disabled={isDeleting}
+              onClick={() => deleteDialogRef.current?.open()}
+              className="rounded-full bg-red-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+            >
+              Delete selected ({selectedIds.size})
+            </button>
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        ref={deleteDialogRef}
+        title={`Delete ${selectedIds.size} recipe${selectedIds.size === 1 ? "" : "s"}?`}
+        description="This can't be undone."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => void handleDeleteSelected()}
+      />
     </div>
   );
 }

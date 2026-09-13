@@ -64,6 +64,14 @@ create policy "Users can delete their own recipes"
 alter table public.recipes add column if not exists image_path text;
 
 /*
+  A single optional category per recipe (e.g. "Breakfast", "Dessert"), used
+  for filtering the recipe list. Free-text rather than an enum/check
+  constraint, so the app's own fixed option list (src/lib/recipe-categories.ts)
+  can change without a migration. NULL means uncategorized.
+*/
+alter table public.recipes add column if not exists category text;
+
+/*
   A private bucket: objects aren't publicly listable or fetchable by URL
   alone, matching the same per-user RLS model as the recipes table above
   rather than "anyone with the link can view it forever". file_size_limit

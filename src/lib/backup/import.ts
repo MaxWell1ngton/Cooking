@@ -150,6 +150,7 @@ export async function performImport(
       variations: backupRecipe.variations,
       notes: backupRecipe.notes,
       imageUrl,
+      category: backupRecipe.category,
       createdAt: backupRecipe.createdAt,
       updatedAt: backupRecipe.updatedAt,
     };
